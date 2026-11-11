@@ -169,6 +169,23 @@ class SecurityMasterBulkUploadTest extends TestCase
     }
 
     #[Test]
+    public function bulk_upload_matches_headers_that_differ_only_in_separators()
+    {
+        $this->field('Average Life/TTM (years)', $this->moneyMarket->id, type: 'Float');
+
+        // The field slugs to average_lifettm_years; users write average_life_ttm_years
+        $response = $this->upload($this->csv(
+            ['issuer', 'isin', 'average_life_ttm_years'],
+            ['FGN', 'NGFGN0000001', '1.5'],
+        ));
+
+        $response->assertOk()->assertJson(['warnings' => []]);
+
+        $saved = collect(PendingSecurityMasterData::sole()->fields_data)->pluck('field_value', 'field_id');
+        $this->assertSame('1.5', $saved[$this->fieldIds['Average Life/TTM (years)']]);
+    }
+
+    #[Test]
     public function single_create_accepts_fields_added_to_the_product_after_its_creation()
     {
         $response = $this->withoutMiddleware()->postJson('/api/v1/admin/security-master', [

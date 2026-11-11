@@ -29,6 +29,7 @@ class SecurityMasterImport implements ToCollection, WithHeadingRow, SkipsEmptyRo
     protected $authoriserId;
     protected $ignoreUnknownColumns;
     protected $fieldMap;
+    protected $compactMap = [];
     /** @var \Illuminate\Support\Collection Active field definitions keyed by id */
     protected $fieldDefinitions;
     protected $failures = [];
@@ -82,13 +83,47 @@ class SecurityMasterImport implements ToCollection, WithHeadingRow, SkipsEmptyRo
         $this->fieldDefinitions = $this->service->fieldDefinitionsFor($this->categoryId, $this->productId);
 
         $this->fieldMap = [];
+        $compact = [];
         foreach ($this->fieldDefinitions as $field) {
             // Index by ID (string or int depending on Excel conversion)
             $this->fieldMap[(string)$field->id] = $field;
 
             // Index by normalized field name slug
             $this->fieldMap[static::slug($field->field_name)] = $field;
+
+            $compact[static::compact($field->field_name)][] = $field;
         }
+
+        // Index by letters/digits only, so separator differences still match:
+        // "Average Life/TTM (years)" slugs to average_lifettm_years, while a user
+        // naturally writes average_life_ttm_years. Skipped where two fields collide.
+        $this->compactMap = [];
+        foreach ($compact as $key => $fields) {
+            if (count($fields) === 1) {
+                $this->compactMap[$key] = $fields[0];
+            }
+        }
+    }
+
+    /**
+     * Letters and digits only, lower-case: average_life_ttm_years => averagelifettmyears.
+     */
+    public static function compact($value): string
+    {
+        return preg_replace('/[^a-z0-9]/', '', static::slug($value));
+    }
+
+    /**
+     * Resolve a spreadsheet header to an active field definition (by id, slug or compact name).
+     */
+    protected function fieldFor($header)
+    {
+        $header = (string)$header;
+
+        return $this->fieldMap[$header]
+            ?? $this->fieldMap[static::slug($header)]
+            ?? $this->compactMap[static::compact($header)]
+            ?? null;
     }
 
     /**
@@ -155,7 +190,7 @@ class SecurityMasterImport implements ToCollection, WithHeadingRow, SkipsEmptyRo
             ->filter(fn($header) => is_string($header) && trim($header) !== '')
             ->map(fn($header) => (string)$header)
             ->reject(fn($header) => in_array($header, static::RESERVED_COLUMNS, true))
-            ->reject(fn($header) => isset($this->fieldMap[$header]) || isset($this->fieldMap[static::slug($header)]))
+            ->reject(fn($header) => $this->fieldFor($header) !== null)
             ->values();
 
         if ($unknown->isEmpty()) {
@@ -243,7 +278,7 @@ class SecurityMasterImport implements ToCollection, WithHeadingRow, SkipsEmptyRo
 
         // We loop through the row keys (headers) and check if they match any known field name or ID
         foreach ($row as $header => $value) {
-            $fieldDef = $this->fieldMap[(string)$header] ?? $this->fieldMap[static::slug($header)] ?? null;
+            $fieldDef = $this->fieldFor($header);
 
             if ($fieldDef) {
                 // Determine normalized value (handle Excel dates)
