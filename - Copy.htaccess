@@ -1,0 +1,37 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Block access to .env and other hidden files
+    # Block access to sensitive files
+    RewriteRule ^(\.env|package\.json|composer\.lock|composer\.json|artisan|server\.php|webpack\.mix\.js|yarn\.lock|config/.*|database/.*|storage/.*|tests/.*)$ - [F,L]
+    RewriteRule (^|/)\. - [F,L]
+
+    # Block direct access to config, storage, and vendor directories
+    RewriteRule ^(config|storage|vendor)/ - [F,L]
+    RewriteRule ^(package.json)/ - [F,L]
+
+    
+
+    # Allow Laravel to handle requests, but block direct PHP file access outside public
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_FILENAME} !/
+    RewriteRule !^/index\.php - [F,L]
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>

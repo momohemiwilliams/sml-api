@@ -1,0 +1,26 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite"
+    },
+    "devDependencies": {
+        "@tailwindcss/vite": "^4.0.0",
+        "autoprefixer": "^10.4.23",
+        "axios": "^1.13.2",
+        "concurrently": "^9.0.1",
+        "laravel-vite-plugin": "^2.0.0",
+        "postcss": "^8.5.6",
+        "vite": "^7.0.7"
+    },
+    "dependencies": {
+        "@popperjs/core": "^2.11.8",
+        "alpinejs": "^3.15.3",
+        "bootstrap": "^5.3.8",
+        "chart.js": "^4.5.1",
+        "datatables.net-buttons": "^3.2.6",
+        "datatables.net-dt": "^2.3.6"
+    }
+}
